@@ -33,12 +33,7 @@ class Trade(object):
         detail_url = "http://api.huobi.com/staticmarket/detail_ltc_json.js"
         result = requests.get(detail_url)
         result = result.json()
-        sells_sum_trade = 0
-        buy_sum_trade = 0
-        for sell in result["sells"]:
-            sells_sum_trade += sell["amount"]
-        for buy in result["buys"]:
-            buy_sum_trade += buy["amount"]
+        p_new = result["p_new"]
         for trade in result["trades"]:
             price = trade["price"]
             t = trade["ts"]
@@ -52,8 +47,17 @@ class Trade(object):
             if not _trade:
                 _trade = HuobiTradeHistory(tradeId=tradeId, type_=type_, trade_time=trade_time, price=price, en_type=en_type, direction=direction, amount=amount)
         commit()
+        level_url = "http://api.huobi.com/staticmarket/depth_ltc_150.js"
+        result = requests.get(level_url)
+        result = result.json()
+        sells_sum_trade = 0
+        buy_sum_trade = 0
+        for sell in result["asks"]:
+            sells_sum_trade += sell[1]
+        for buy in result["bids"]:
+            buy_sum_trade += buy[1]
         data = {}
-        data["new"] = result["p_new"]
+        data["new"] = p_new
         data["sells_sum_trade"] = sells_sum_trade
         data["buy_sum_trade"] = buy_sum_trade
         print("buy_sum_trade:", buy_sum_trade)
