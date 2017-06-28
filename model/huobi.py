@@ -13,4 +13,9 @@ class HuobiTradeHistory(db.Entity):
     type_ = Required(str)
     en_type = Required(str)
 
+class HuobiKDJ(db.Entity):
+    trade_time = PrimaryKey(datetime)
+    price = Required(float)
+    K = Required(float)
+    D = Required(float)
 
