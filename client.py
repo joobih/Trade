@@ -156,6 +156,41 @@ class Trade(object):
         logger.error("Proportion for Trade ;buy_num/sell_num:{}".format(proportion_trade))
 #        print trades
 
+    @db_session
+    def KDJ(self):
+        url = "http://api.huobi.com/staticmarket/ltc_kline_001_json.js"
+        result = requests.get(url)
+        trades = result.json()
+        trades.sort(lambda x,y: cmp(x[0], y[0]))
+        #将存在于数据库中的最大一条的kdj数据查询出来
+        newest_trade_time = max(k.trade_time for k in HuobiKDJ)
+        if newest_trade_time:
+            newest_kdj = get(k for k in HuobiKDJ if k.trade_time == newest_trade_time)
+            K,D = newest_kdj.K, newest_kdj.D
+            newest_time
+        else:
+            K, D = 50, 50
+        print newest_trade_time,"----"
+        for trade in trades:
+            Cn = trade[4]
+            Hn = trade[2]
+            Ln = trade[3]
+            if (Hn - Ln) == 0:
+                K = 50
+                D = 50
+                print(trade, "    ")
+            else:
+                RSV = ((Cn - Ln) / (Hn - Ln)) * 100
+                K = (RSV + 2*K) / 3.0
+                D = (K + 2*D) / 3.0
+            trade.append(K)
+            trade.append(D)
+            trade.append(K-D)
+            if (K < 10 and D < 20) or (K > 80 and D > 80):
+                print trade[0],trade[4],trade[6],trade[7],trade[8], K, D
+            else:
+                print trade[0],trade[4],trade[6],trade[7],trade[8]
+
     def run(self):
         while True:
             data = self.get_market()

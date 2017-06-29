@@ -4,7 +4,7 @@ import requests
 import time
 
 def KDJ(trades):
-    trades.sort(lambda x,y: x[0] > x[0])
+    trades.sort(lambda x,y: cmp(x[0], y[0]))
     K,D = 50,50
     for trade in trades:
         Cn = trade[4]
@@ -25,6 +25,7 @@ def KDJ(trades):
             print trade[0],trade[4],trade[6],trade[7],trade[8], K, D
         else:
             print trade[0],trade[4],trade[6],trade[7],trade[8]
+
 
 
 
