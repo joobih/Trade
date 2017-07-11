@@ -36,6 +36,27 @@ def revert_to_date(timestamp, delimiter='-'):
     date_t = datetime.strptime(str_t, "%Y{}%m{}%d %H:%M:%S".format(delimiter, delimiter))
     return date_t
 
+"""
+    将日期字符串转换为datetime
+"""
+def revertstr_to_date(str_t, delimiter='-'):
+    date_t = datetime.strptime(str_t, "%Y{}%m{}%d%H%M%S".format(delimiter, delimiter))
+    return date_t
+
+"""
+    获取列表中的最大值和最小值
+"""
+def get_most_price(trades):
+    max_price = 0
+    min_price = 1 << 31
+    for trade in trades:
+        if trade[2] > max_price:
+            max_price = trade[2]
+        if trade[3] < min_price:
+            min_price = trade[3]
+    print max_price,min_price
+    return max_price, min_price
+
 class Trade(object):
     def __init__(self):
         pass
@@ -163,22 +184,29 @@ class Trade(object):
         trades = result.json()
         trades.sort(lambda x,y: cmp(x[0], y[0]))
         #将存在于数据库中的最大一条的kdj数据查询出来
-        newest_trade_time = max(k.trade_time for k in HuobiKDJ)
-        if newest_trade_time:
+        newest_trade_time = db.select("select max(trade_time) from huobikdj where trade_time < (select max(trade_time) from huobikdj)")
+        print newest_trade_time
+        if newest_trade_time[0]:
+            newest_trade_time = newest_trade_time[0]
             newest_kdj = get(k for k in HuobiKDJ if k.trade_time == newest_trade_time)
             K,D = newest_kdj.K, newest_kdj.D
-            newest_time
         else:
             K, D = 50, 50
-        print newest_trade_time,"----"
-        for trade in trades:
+            newest_trade_time = datetime(1990,1,1)
+        for i,trade in enumerate(trades):
+            trade[0] = trade[0][0:-3]
+            trade[0] = revertstr_to_date(trade[0], delimiter="")
+            if trade[0] <= newest_trade_time:
+                continue
             Cn = trade[4]
-            Hn = trade[2]
-            Ln = trade[3]
+            #获取9个单位（单位可以表示为1分钟，5分钟，15分钟，日，周，月等）内的最大值和最小值
+            if i < 9:
+                Hn, Ln = get_most_price(trades[:i+1])
+            else:
+                Hn, Ln = get_most_price(trades[i-9:i+1])
             if (Hn - Ln) == 0:
                 K = 50
                 D = 50
-                print(trade, "    ")
             else:
                 RSV = ((Cn - Ln) / (Hn - Ln)) * 100
                 K = (RSV + 2*K) / 3.0
@@ -190,12 +218,21 @@ class Trade(object):
                 print trade[0],trade[4],trade[6],trade[7],trade[8], K, D
             else:
                 print trade[0],trade[4],trade[6],trade[7],trade[8]
+            huobi_kdj = get(h for h in HuobiKDJ if h.trade_time == trade[0])
+            if not huobi_kdj:
+                HuobiKDJ(trade_time=trade[0], price=trade[4], K=K, D=D)
+            else:
+                huobi_kdj.price = trade[4]
+                huobi_kdj.K = K
+                huobi_kdj.D = D
+            commit()
 
     def run(self):
         while True:
-            data = self.get_market()
-            new_price = data["new"]
-            self.trend(new_price, time_gap=60)
+#            data = self.get_market()
+#            new_price = data["new"]
+#            self.trend(new_price, time_gap=60)
+            self.KDJ()
             time.sleep(2)
 
 def main():
